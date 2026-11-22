@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8f5">
+  <title>ReBell — Pasture Dashboard & GNSS Base Station</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root { --bg:#f6f8f5; --surface:#ffffff; --surface-2:#f9faf8; --ink:#162c25; --ink-2:#50655e; --muted:#80918a; --line:#e7ebe5; --green:#256a4b; --green-2:#e6f3ea; --lime:#c7e9a0; --orange:#dd7b3e; --orange-bg:#fff0e3; --shadow:0 14px 45px rgba(31,54,42,.035); --r:17px; }
+    * {box-sizing:border-box;} html{scroll-behavior:smooth} body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px} button,input{font:inherit} button{cursor:pointer} button:disabled{opacity:.4;cursor:not-allowed}
+    .app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
+    .sidebar{background:#fff;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;padding:27px 16px;display:flex;flex-direction:column;z-index:30}
+    .brand{display:flex;align-items:center;gap:10px;padding:0 10px 34px}
+    .brand-mark{width:37px;height:37px;border-radius:12px;background:#215f45;display:grid;place-items:center;color:white;box-shadow:0 6px 15px #1d79502e}
+    .brand-text{font-size:19px;font-weight:820;letter-spacing:-.8px}.brand-sub{font-size:9px;color:#7e9488;font-weight:750;letter-spacing:2px;display:block;margin-top:-2px}
+    .side-label{color:#98a49e;text-transform:uppercase;letter-spacing:1.7px;font-size:10px;font-weight:800;padding:12px 14px}
+    .nav{display:flex;flex-direction:column;gap:4px}.nav-item{border:0;background:transparent;width:100%;display:flex;gap:11px;align-items:center;color:#66766f;font-weight:600;padding:12px 14px;text-align:left;border-radius:11px;transition:.15s}.nav-item svg{width:17px;height:17px;stroke-width:1.8}.nav-item:hover{background:#f3f7f2;color:var(--green)}.nav-item.active{color:#216448;background:#eaf4ec}
+    .nav-count{margin-left:auto;border-radius:7px;background:#f5e8d8;color:#ab642e;font-size:11px;padding:2px 6px}
+    .side-bottom{margin-top:auto;padding:14px 10px;border-top:1px solid var(--line)}.side-bottom-top{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:750}.sim-icon{height:8px;width:8px;border-radius:100%;background:#65b77f;box-shadow:0 0 0 4px #e3f5e8}.side-bottom p{margin:7px 0 0;font-size:11px;line-height:1.55;color:#819087}
+    .main{padding:28px clamp(20px,3.5vw,55px) 36px;max-width:1660px;width:100%;margin:0 auto;min-width:0}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:27px}.eyebrow{color:var(--green);text-transform:uppercase;font-weight:820;font-size:10px;letter-spacing:2.2px;margin-bottom:7px}.headline{font-size:clamp(25px,2.4vw,34px);margin:0;font-weight:800;letter-spacing:-1.35px;line-height:1.2}.subhead{margin:7px 0 0;color:#84928b;font-size:12px}
+    .top-actions,.inline{display:flex;gap:9px;align-items:center}.top-actions{flex-wrap:wrap;justify-content:flex-end}.pill{border:1px solid #e2e8df;border-radius:50px;padding:8px 12px;white-space:nowrap;font-size:11px;font-weight:750;display:flex;align-items:center;gap:8px;background:white;color:#62766a}.pill .dot{width:7px;height:7px;background:#54ae76;border-radius:50%}.pill.demo{color:#2c694c;background:#e9f6eb;border-color:#d4ead8;letter-spacing:.6px}.button{border:1px solid var(--line);border-radius:10px;background:white;color:#304b3e;padding:10px 13px;font-size:12px;font-weight:720;display:inline-flex;gap:7px;align-items:center;justify-content:center;white-space:nowrap;transition:background .15s,transform .15s}.button:hover{background:#f4f8f4}.button:active{transform:translateY(1px)}.button.primary{background:#276d4c;color:white;border-color:#276d4c}.button.primary:hover{background:#1b583c}.button.ghost{background:transparent}.button.sm{padding:8px 10px;font-size:11px}.button.warn{border-color:#f2dccb;color:#ac652d;background:#fff6ee}.button.selected{color:#fff!important;background:#25694a!important;border-color:#25694a!important}
+    .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin:0 0 21px}.kpi{border:1px solid var(--line);background:white;border-radius:15px;box-shadow:var(--shadow);padding:18px 20px;min-width:0}.kpi-label{color:#7e8b82;font-size:11px;font-weight:650;display:flex;align-items:center;justify-content:space-between;gap:5px}.kpi-icon{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:#eff5ee;color:var(--green)}.kpi-icon.warn{background:#fff1e7;color:#c36c32}.kpi-icon svg{height:16px;width:16px}.kpi-number{font-size:30px;line-height:1.1;margin:13px 0 4px;font-weight:800;letter-spacing:-1.5px}.kpi-note{font-size:10px;color:#9aaa9d}.kpi-note.warning{color:#c17b44}
+    .layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);align-items:start;gap:19px}.col-left,.col-right{min-width:0;display:flex;flex-direction:column;gap:19px}.card{border:1px solid var(--line);background:#fff;border-radius:17px;box-shadow:var(--shadow);overflow:hidden}.card-pad{padding:19px 20px}.card-header{display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:16px}.section-title{font-size:15px;font-weight:790;letter-spacing:-.45px;margin:0}.section-sub{font-size:11px;margin:5px 0 0;color:#94a198}.count{background:#f0f3ef;color:#7a8a80;padding:5px 9px;border-radius:7px;font-size:10px;font-weight:800}
+    .map-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between;padding:0 19px 14px}.map-tools{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.map-hint{font-size:11px;color:#819188;display:flex;align-items:center;gap:6px}.map-card{margin-bottom:19px}.map-box{height:clamp(540px,74vh,800px);min-height:540px;width:100%;position:relative;background:linear-gradient(110deg,#e2ebd8,#c3d7be);isolation:isolate}.map-box.draw-active{cursor:crosshair}.map-box.draw-active .leaflet-container{cursor:crosshair}.map-overlay{position:absolute;z-index:400;left:14px;top:14px;background:rgba(255,255,255,.97);padding:10px 12px;border:1px solid #e5eae1;border-radius:11px;box-shadow:0 5px 18px #16352018;pointer-events:none;font-size:11px;color:#547061;max-width:250px}.map-overlay strong{color:#284b37}.map-footer{padding:12px 19px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:10px;color:#83948b}.legend{display:flex;gap:15px;align-items:center;flex-wrap:wrap}.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;vertical-align:middle;margin-right:5px}.legend .green{background:#297451}.legend .orange{background:#d56c34}.legend .fence{background:#8bd2a8;border:1px solid #4b8f68}.legend .station{background:#425cc8;box-shadow:0 0 0 2px #ced7ff}.legend .range{background:#e3eaff;border:1.5px dashed #5175c4}.range-toggle{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #dbe4f6;border-radius:9px;background:#f7f9ff;font-size:11px;font-weight:720;color:#3d5894;cursor:pointer;user-select:none;white-space:nowrap}.range-toggle input{accent-color:#496fbb;cursor:pointer;margin:0}.range-tag{font-weight:660;color:#8696b7;font-size:9px}.map-disclaimer{font-size:10px;color:#73819b;flex:1;text-align:right;min-width:160px}.leaflet-container{font:inherit!important;background:#dae8d3!important}.leaflet-control-attribution{font-size:9px!important}
+    .cow-pin{width:34px;height:34px;background:#2c7855;border:3px solid white;border-radius:50%;box-shadow:0 3px 10px #173d3066;display:grid;place-items:center;color:white;font-size:12px;font-weight:820;transition:transform .15s}.cow-pin.alert{background:#d97436;box-shadow:0 0 0 5px #e29a5b35,0 3px 10px #7d452d45}.cow-pin.selected{transform:scale(1.18);outline:3px solid #193e2f;outline-offset:2px}.leaflet-div-icon{background:transparent!important;border:0!important}.leaflet-popup-content-wrapper{border-radius:12px!important}.leaflet-popup-content{margin:11px 14px!important}.boundary-vertex{width:11px;height:11px;border-radius:50%;background:white;border:2px solid #1d7e4d;box-shadow:0 1px 4px #193c3040}.gateway-pin{height:40px;width:40px;border:3px solid white;background:#405bb5;border-radius:12px;box-shadow:0 3px 12px #18376e70;display:grid;place-items:center;font-size:21px;color:white}.gateway-pin.stale{background:#8894a8}.gateway-strip{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:11px 19px;background:#f7f9ff;border-top:1px solid #e6eaff;border-bottom:1px solid #e6eaff;font-size:11px}.gateway-strip strong{color:#334a90}.gateway-message{color:#63728a;font-size:11px}.gateway-strip .button{margin-left:auto}.gateway-strip.unavailable{background:#f9fafb;border-color:#e9ebee}.gateway-strip.unavailable strong{color:#697782}
+    .right-animal-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}.animal-avatar{height:47px;width:47px;border-radius:13px;display:grid;place-items:center;background:#ecf2e9;font-size:22px}.animal-name{font-size:18px;font-weight:800;letter-spacing:-.55px}.animal-id{font-size:11px;color:#91a198;margin-top:3px}.status-chip{margin-left:auto;border-radius:8px;padding:6px 8px;color:#286b4e;background:#ebf5ed;font-size:10px;font-weight:750}.status-chip.out{background:#fff0e4;color:#bb6d34}
+    .detail-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:11px 0;font-size:11px;color:#81918a}.detail-row strong{font-size:11px;color:#385146;font-weight:740;text-align:right}.detail-row .quality{display:inline-flex;align-items:center;gap:6px;border-radius:7px;padding:5px 7px;background:#eaf4ec;color:#286646}.detail-row .quality::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}.detail-row .quality.caution{background:#fff2e4;color:#a96c2f}.detail-row .quality.bad{background:#fff0e8;color:#aa5330}.detail-row .quality.neutral{background:#f0f2f3;color:#687782}.detail-hint{margin:-5px 0 9px;font-size:10px;color:#8a9a8d;line-height:1.5}.location-actions{display:flex;align-items:center;gap:8px}.location-actions .button{padding:5px 7px;font-size:10px;color:#2c5f9d}.tech-details{margin:13px 0 3px;border-top:1px solid #eef1ea;padding-top:10px;font-size:11px;color:#75877d}.tech-details summary{cursor:pointer;color:#5e746a;font-weight:700}.tech-details p{font-size:10px;line-height:1.6;margin:9px 0 3px}.tech-details strong{color:#385146}.battery-track{width:100%;height:6px;background:#edf0ea;border-radius:50px;overflow:hidden;margin-top:5px}.battery-bar{height:100%;background:#67b27a;border-radius:50px;transition:width .3s}.divider{height:1px;background:var(--line);margin:17px 0}.small-label{font-size:10px;text-transform:uppercase;font-weight:800;letter-spacing:1.4px;color:#9ba89e;margin-bottom:11px}.mode-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.mode-btn{padding:10px 6px;border:1px solid #e4eae3;border-radius:10px;background:#fdfefd;font-size:11px;font-weight:740;color:#63766b}.mode-btn.active{background:#e8f3e9;border-color:#81ba94;color:#206644}.mode-btn:hover{border-color:#73ab87}.note{border-radius:10px;background:#f5f8f3;padding:12px;margin-top:13px;font-size:11px;line-height:1.5;color:#74847a}.note strong{color:#446451}
+    .herd-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.search{border:1px solid #e5eae5;border-radius:9px;background:#fafbf9;padding:9px 11px;font-size:11px;min-width:0;width:100%;outline:none;color:#283f32}.search:focus{border-color:#81ab90;box-shadow:0 0 0 3px #67b27a15}.herd-list{max-height:291px;overflow:auto}.herd-item{padding:12px 10px;display:grid;grid-template-columns:33px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;background:none;border:1px solid transparent;border-bottom-color:#f0f3ee;text-align:left;border-radius:10px;color:inherit}.herd-item:last-child{border-bottom-color:transparent}.herd-item:hover,.herd-item.active{background:#f0f6ef;border-color:#e3eee2}.herd-num{height:29px;width:29px;display:grid;place-items:center;border-radius:50%;background:#e7f2e9;color:#2b7453;font-size:11px;font-weight:800}.herd-num.out{background:#ffead7;color:#b46228}.herd-name{font-weight:760;font-size:12px}.herd-id{color:#9aaa9f;font-size:10px;margin-top:4px}.herd-status{font-size:10px;font-weight:780;color:#4d9070}.herd-status.out{color:#ca793b}
+    .events{display:flex;flex-direction:column;gap:0;max-height:260px;overflow:auto}.event{display:flex;gap:10px;padding:13px 0;border-top:1px solid #f1f4ee}.event:first-child{border-top:0}.event-mark{flex:none;width:29px;height:29px;border-radius:9px;background:#eff4ee;color:#42815e;display:grid;place-items:center;font-size:14px}.event-mark.alert{background:#fff0e4;color:#cb6e30}.event-content{flex:1;min-width:0}.event-title{font-size:11px;font-weight:760}.event-desc{color:#94a49a;font-size:10px;line-height:1.45;margin-top:4px}.event-time{font-size:10px;color:#9cad9f;white-space:nowrap}.empty{padding:20px;text-align:center;color:#a0ada3;font-size:12px}
+    .sim-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.speed{display:flex;align-items:center;padding:3px;background:#f3f6f1;border-radius:9px;gap:2px}.speed button{border:0;background:none;border-radius:7px;padding:6px 8px;font-size:10px;font-weight:800;color:#859487}.speed button.on{background:white;color:#2e6b4c;box-shadow:0 1px 4px #16392614}
+    .footnote{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:22px;color:#a5b0a7;font-size:10px}.footer-right{display:flex;gap:15px}
+    .toast-area{position:fixed;right:24px;bottom:24px;z-index:5000;display:flex;flex-direction:column;gap:8px;pointer-events:none}.toast{padding:13px 17px;border-radius:12px;background:#1a4432;color:white;min-width:245px;max-width:340px;box-shadow:0 10px 35px #10271d35;font-size:12px;line-height:1.45;animation:slidein .22s ease}.toast.warning{background:#a95825}@keyframes slidein{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+    @media(max-width:1230px){.layout{grid-template-columns:minmax(0,1fr) minmax(280px,1fr)}.main{padding:25px 22px}.kpis{gap:10px}.kpi{padding:15px}.top-actions .pill:not(.demo){display:none}}
+    @media(max-width:940px){.app{grid-template-columns:70px 1fr}.sidebar{padding:22px 10px}.brand{padding:0 5px 30px}.brand-text,.side-label,.nav-item span,.nav-count,.side-bottom p,.side-bottom-top span{display:none}.brand-mark{flex:none}.nav-item{justify-content:center;padding:13px}.side-bottom{padding:15px;display:grid;place-items:center}.layout{grid-template-columns:1fr}.col-right{display:grid;grid-template-columns:1fr 1fr;align-items:start;gap:15px}.map-box{height:500px;min-height:400px}}
+    @media(max-width:670px){.app{display:block}.sidebar{position:sticky;top:0;display:flex;flex-direction:row;align-items:center;justify-content:space-between;height:66px;padding:8px 14px}.brand{padding:0}.brand-text{display:block;font-size:16px}.brand-sub{font-size:8px}.brand-mark{height:32px;width:32px}.side-label,.side-bottom{display:none}.nav{flex-direction:row;gap:3px}.nav-item{padding:10px}.nav-item svg{height:16px;width:16px}.main{padding:19px 13px}.top{align-items:start}.top-actions{gap:5px}.top-actions .button{padding:9px}.top-actions .button .hide-mobile{display:none}.headline{font-size:25px}.top-actions .pill.demo{font-size:9px;padding:7px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}.kpi{padding:12px}.kpi-number{font-size:26px}.card-pad{padding:15px}.col-left,.col-right{gap:12px}.col-right{display:flex}.layout{gap:12px}.map-box{height:425px;min-height:350px}.map-toolbar{padding:0 13px 12px}.map-hint{display:none}.map-footer{padding:10px 13px}.footnote{font-size:9px}}
+    .chime-button{border-color:#dbe8d7;background:#f4f9f3;color:#356347;transition:background .15s,border-color .15s}
+    .chime-button:hover{background:#e8f5e8}
+    .chime-button.active{border-color:#97c5a6;background:#e6f4e9;color:#1e6945}
+    @media(max-width:670px){.top{flex-direction:column;align-items:stretch;gap:12px}.top-actions{justify-content:flex-start}.chime-button .chime-label{display:inline}.top-actions .button{padding:8px 10px}}
+  
+    .connection-card{background:white;border:1px solid var(--line);border-radius:15px;padding:17px 19px;margin-bottom:20px;box-shadow:var(--shadow)}
+    .connection-top{display:flex;align-items:start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .conn-title{font-weight:790;font-size:14px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+    .connection-state{font-size:10px;font-weight:800;color:#2d6d50;background:#eaf6ec;border-radius:20px;padding:5px 9px}
+    .connection-state.live{background:#e8eefc;color:#305b97}.connection-state.error{background:#fff2e7;color:#b66d35}
+    .connection-top p,.conn-hint{margin:7px 0 0;color:#8b9a91;font-size:11px;line-height:1.5}
+    .connection-actions,.connection-controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+    .connection-controls{border-top:1px solid var(--line);margin-top:15px;padding-top:14px}
+    .connection-controls label{color:#7e8b82;font-size:11px;font-weight:730}
+    .topic-input{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:12px ui-monospace,SFMono-Regular,Menlo,monospace;min-width:230px;color:#284b37;background:white}.topic-input:focus{outline:2px solid #8bd2a8;outline-offset:1px}.mqtt-state{font-size:11px;color:#819188}.mqtt-state.ok{color:#2d6d50;font-weight:720}
+    .connection-controls select{padding:8px 10px;border:1px solid #dce4dc;background:white;border-radius:8px;color:#344d3e;max-width:240px;min-width:125px;font-size:11px}
+    .pill.live{background:#eaf0ff;color:#2c578f;border-color:#cdddf7}
+    @media(max-width:680px){.connection-controls select{min-width:100%;width:100%}.connection-actions{width:100%}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/><path d="M12 2v1"/></svg></div><div><div class="brand-text">ReBell<span style="color:#86bd7a">.</span></div><span class="brand-sub">COWBELL CONTROL</span></div></div>
+    <div class="side-label">WORKSPACE</div>
+    <nav class="nav" aria-label="Main navigation">
+      <button class="nav-item active" data-nav="dashboard" title="Overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>Overview</span></button>
+      <button class="nav-item" data-nav="pasture" title="Pasture map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><path d="M9 3v15M15 6v15"/></svg><span>Pasture map</span></button>
+      <button class="nav-item" data-nav="herd" title="My herd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 15V8l4-3h10l4 3v7M7 18h10M6 12h.01M18 12h.01M7 19v2m10-2v2"/></svg><span>My herd</span></button>
+      <button class="nav-item" data-nav="activity" title="Activity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16v16H4zM8 9h8M8 13h8M8 17h5"/></svg><span>Activity</span><b id="side-count" class="nav-count">0</b></button>
+    </nav>
+    <div class="side-bottom"><div class="side-bottom-top"><i class="sim-icon"></i><span id="sidebar-status">Simulation connected</span></div><p id="sidebar-detail">Prototype environment<br>Hardware not connected</p></div>
+  </aside>
+  <main class="main" id="dashboard">
+    <header class="top"><div><div class="eyebrow">PASTURE MONITORING / PROTOTYPE</div><h1 class="headline">Good afternoon, Shepherd <span style="font-size:21px">🌿</span></h1><p class="subhead">Track your herd, manage your boundaries, and control the bells.</p></div><div class="top-actions"><span class="pill demo" id="source-badge"><span class="dot"></span> DEMO DATA</span><button class="button chime-button" id="sound-toggle" type="button" aria-pressed="false" title="Enable a bell chime for every new activity event">🔕 <span class="chime-label">Bell alerts: Off</span></button><button class="button" id="export-button" title="Download current demo data as JSON"><span class="hide-mobile">↓ Export data</span><span class="mobile-icon" style="display:none">↓</span></button></div></header>
+    <section class="connection-card" aria-label="Hardware connection">
+    <div class="connection-top"><div><div class="conn-title">⚡ Hardware connection <span id="connection-status" class="connection-state">Simulation active</span></div><p id="connection-hint">Demo data is active. Connect a USB gateway or a Wi-Fi gateway when ready.</p></div><div class="connection-actions"><button id="demo-button" class="button sm selected" type="button">Simulation</button><button id="live-button" class="button sm" type="button">Live hardware</button></div></div>
+    <div class="connection-controls"><label for="serial-port">USB / COM Port</label><select id="serial-port" aria-label="Serial port"><option value="">Scan for devices…</option></select><button id="scan-ports" class="button sm" type="button">↻ Refresh ports</button><button id="connect-button" class="button sm primary" type="button">Connect USB</button><button id="disconnect-button" class="button sm" type="button" disabled>Disconnect</button><button id="send-fence-button" class="button sm" type="button" disabled>↑ Send fence to gateway</button></div>
+    <div class="connection-controls"><label for="mqtt-topic">Wi-Fi gateway topic</label><input id="mqtt-topic" class="topic-input" type="text" placeholder="rebell/XXXXXXXXXXXX" spellcheck="false" autocomplete="off" aria-label="Wi-Fi gateway MQTT topic"><button id="mqtt-connect-button" class="button sm primary" type="button">Connect online</button><button id="mqtt-disconnect-button" class="button sm" type="button" disabled>Disconnect</button><span id="mqtt-state" class="mqtt-state">Gateway on a phone hotspot → broker.hivemq.com</span></div>
+    <p class="conn-hint">Live mode shows real gateway JSON only. USB needs the local Python app; the Wi-Fi gateway works from any browser with internet (public test broker: anyone who knows the topic can read it). Controls require hardware acknowledgments.</p>
+  </section>
+  <section class="kpis" aria-label="Herd statistics">
+      <div class="kpi"><div class="kpi-label">Total animals <span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><path d="M2 20v-2a6 6 0 0 1 12 0v2M14 14a6 6 0 0 1 8 6"/></svg></span></div><div class="kpi-number" id="stat-total">6</div><div class="kpi-note">Registered on this pasture</div></div>
+      <div class="kpi"><div class="kpi-label">Inside boundary <span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m5 12 5 5L20 6"/></svg></span></div><div class="kpi-number" id="stat-inside">6</div><div class="kpi-note">Safely in permitted area</div></div>
+      <div class="kpi"><div class="kpi-label">Boundary alerts <span class="kpi-icon warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3 2 20h20L12 3ZM12 9v5m0 3h.01"/></svg></span></div><div class="kpi-number" id="stat-alerts">0</div><div class="kpi-note warning">Animals beyond the boundary</div></div>
+      <div class="kpi"><div class="kpi-label">Online devices <span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 9a15 15 0 0 1 20 0M5 13a10 10 0 0 1 14 0M8 17a5 5 0 0 1 8 0"/><circle cx="12" cy="21" r="1" fill="currentColor"/></svg></span></div><div class="kpi-number" id="stat-online">6</div><div class="kpi-note" id="online-caption">Mock LoRa connections</div></div>
+    </section>
+<section class="card map-card" id="pasture"><div class="card-pad" style="padding-bottom:9px"><div class="card-header" style="margin-bottom:5px"><div><h2 class="section-title">Live pasture map</h2><p class="section-sub" id="map-source-label">Parc de Milan, Lausanne · simulated positions</p></div><span class="count" id="map-animals">6 animals</span></div></div>
+          <div class="map-toolbar"><div class="map-tools"><button class="button sm primary" id="draw-button">⌁ Draw boundary</button><button class="button sm" id="finish-button" style="display:none">✓ Save boundary</button><button class="button sm" id="undo-button" style="display:none">↶ Undo</button><button class="button sm" id="cancel-button" style="display:none">Cancel</button><button class="button sm" id="reset-fence">Reset fence</button><label class="range-toggle" title="100 m example circle around the base station; not a real LoRa range estimate"><input type="checkbox" id="coverage-toggle" checked> LoRa range <span class="range-tag">illustrative</span></label></div><div class="map-hint">✳ Click an animal to inspect it</div></div>
+          <div class="map-box" id="map"><div class="map-overlay" id="map-overlay"><strong>Parc de Milan · Demo</strong><br>Green = example virtual fence</div></div>
+          <div class="gateway-strip" id="gateway-strip"><strong>📡 Base station (demo GNSS)</strong><span id="gateway-message" class="gateway-message">Position available · simulated</span><button id="gateway-focus" class="button sm" type="button">Show on map</button></div>
+          <div class="map-footer"><div class="legend"><span><i class="green"></i>Inside fence</span><span><i class="orange"></i>Boundary breach</span><span><i class="fence"></i>Virtual fence</span><span><i class="station"></i>Base station</span><span id="coverage-legend"><i class="range"></i>LoRa demo radius</span></div><div class="map-disclaimer" id="coverage-note">100 m visual reference only · not measured LoRa coverage.</div><div id="map-attribution">Map: Esri / OpenTopoMap / OpenStreetMap</div></div>
+        </section>
+    <div class="layout">
+      <div class="col-left">
+        
+        <section class="card" id="activity"><div class="card-pad"><div class="card-header"><div><h2 class="section-title">Recent activity</h2><p class="section-sub">Simulator or gateway events · Enable bell alerts to hear new activity</p></div><span class="count" id="event-count">0 events</span></div><div class="events" id="event-list"></div></div></section>
+        <section class="card" id="herd"><div class="card-pad"><div class="card-header"><div><h2 class="section-title">Your herd</h2><p class="section-sub">Select an animal to inspect</p></div><span class="count" id="herd-count">6 cows</span></div><div class="herd-tools"><input class="search" id="search-cows" placeholder="Search name or device ID…" aria-label="Search herd"></div><div class="herd-list" id="herd-list"></div></div></section>
+      </div>
+      <div class="col-right">
+        <section class="card" id="animal-details"><div class="card-pad"><div class="card-header"><div><h2 class="section-title">Animal control</h2><p class="section-sub">Selected device status & commands</p></div><span class="count" id="device-source">LoRa mock</span></div><div class="right-animal-header"><div class="animal-avatar">🐄</div><div><div class="animal-name" id="detail-name">Maple</div><div class="animal-id" id="detail-id">COW-006</div></div><span class="status-chip" id="detail-status">INSIDE</span></div>
+          <div class="detail-row"><span>Animal location</span><span class="location-actions"><strong id="detail-location">On the map</strong><button id="detail-locate-button" type="button" class="button sm">Show</button></span></div>
+          <div class="detail-row"><span>GPS positioning</span><strong class="quality" id="detail-gps">Precise</strong></div><p class="detail-hint" id="detail-gps-note">The location can be used for the virtual fence.</p>
+          <div class="detail-row"><span>Radio connection</span><strong class="quality" id="detail-signal">Good</strong></div><p class="detail-hint" id="detail-signal-note">The base station is receiving updates.</p><div class="detail-row"><span>Clapper position</span><strong id="detail-clapper">LOCKED</strong></div><div class="detail-row" style="margin-bottom:5px"><span>Battery level</span><strong id="detail-battery">82%</strong></div><div class="battery-track"><div class="battery-bar" id="battery-bar" style="width:82%"></div></div>
+          <details class="tech-details"><summary>Technical information</summary><p>Last coordinates: <strong id="detail-coordinates">—</strong><br>GPS estimated accuracy: <strong id="detail-gps-raw">—</strong><br>LoRa RSSI: <strong id="detail-signal-raw">—</strong><br>Radio signal classification is an estimate; packet delivery and SNR also matter.</p></details>
+          <div class="divider"></div><div class="small-label">SOUND CONTROL</div><div class="mode-buttons"><button class="mode-btn active" data-mode="AUTO">↻ Auto</button><button class="mode-btn" data-mode="SILENT">◌ Silent</button><button class="mode-btn" data-mode="SOUND">♫ Sound</button></div><div class="note" id="hardware-note"><strong>Demo behavior:</strong> Auto mode releases the clapper outside the fence and locks it inside. Commands are simulated, not sent to hardware.</div></div></section>
+        
+        <section class="card"><div class="card-pad"><div class="card-header"><div><h2 class="section-title">Simulation tools</h2><p class="section-sub">Try out real-world scenarios with fake GPS data</p></div></div><div class="sim-controls"><button class="button sm primary" id="breach-button">↗ Simulate breach</button><button class="button sm" id="play-button">Ⅱ Pause</button><div class="speed" aria-label="Simulation speed"><button class="on" data-speed="1">1×</button><button data-speed="3">3×</button><button data-speed="6">6×</button></div><button class="button sm" id="reset-button">↶ Reset all</button></div><p class="section-sub" style="margin:12px 0 0;line-height:1.5">Positions move automatically. Use “Simulate breach” to move the selected cow beyond the boundary and test the alert.</p></div></section>
+      </div>
+    </div>
+    <footer class="footnote"><span>ReBell. / Engineering prototype / v0.6</span><span class="footer-right"><span>⚡ Arduino Nano ESP32 planned</span><span id="footer-source">All positions & commands simulated</span></span></footer>
+  </main>
+</div>
+<div class="toast-area" id="toast-area" aria-live="polite"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+'use strict';
+// ReBell v0.6: Parc de Milan simulation, illustrative LoRa overlay, full-width map, GNSS gateway marker, readable animal indicators, USB bridge. Never mark a command as actuated from an ACK alone.
+const STORAGE_KEY = 'rebell_parc_de_milan_demo_boundary_v06';
+// Parc de Milan, Lausanne (Place de Milan, western open lawn).
+// The demonstration fence is an illustrative inner grazing area, NOT the official park outline.
+// Coordinates for all sample cows and for the base station are simulated, not measured GNSS fixes.
+const PARK_CENTER=[46.51464,6.62208];
+const FENCE_DEFAULT = [
+  [46.51412,6.62184],[46.51439,6.62142],[46.51477,6.62137],
+  [46.51503,6.62179],[46.51505,6.62231],[46.51483,6.62273],
+  [46.51438,6.62275],[46.51413,6.62235]
+];
+const GATEWAY_DEFAULT={lat:46.51455,lng:6.62172,gpsAccuracy:3.0,gpsValid:true,simulated:true};
+const COWS_DEFAULT = [
+  {id:'COW-001',name:'Clover',lat:46.51461,lng:6.62203,battery:94,gpsAccuracy:2.7,rssi:-82,mode:'AUTO'},
+  {id:'COW-002',name:'Daisy',lat:46.51491,lng:6.62212,battery:88,gpsAccuracy:3.1,rssi:-78,mode:'AUTO'},
+  {id:'COW-003',name:'Bella',lat:46.51468,lng:6.62248,battery:73,gpsAccuracy:2.8,rssi:-90,mode:'AUTO'},
+  {id:'COW-004',name:'Luna',lat:46.51437,lng:6.62192,battery:81,gpsAccuracy:3.9,rssi:-86,mode:'AUTO'},
+  {id:'COW-005',name:'Moka',lat:46.51434,lng:6.62235,battery:65,gpsAccuracy:3.5,rssi:-98,mode:'AUTO'},
+  {id:'COW-006',name:'Maple',lat:46.51480,lng:6.62164,battery:82,gpsAccuracy:3.2,rssi:-92,mode:'AUTO'}
+];
+// A schematic 100 m reference circle helps viewers see the gateway as an RF hub.
+// It does NOT model coverage, received power, packet delivery, urban obstructions or terrain.
+const LORA_ILLUSTRATION_RADIUS_M=100;
+function copy(obj){return JSON.parse(JSON.stringify(obj));}
+function loadFence(){try{const val=JSON.parse(localStorage.getItem(STORAGE_KEY));if(Array.isArray(val)&&val.length>=3&&val.every(p=>Array.isArray(p)&&p.length===2&&p.every(Number.isFinite)))return val;}catch(_){}return copy(FENCE_DEFAULT);}
+let fence=loadFence(), cows=copy(COWS_DEFAULT), selectedId='COW-006', events=[], isPlaying=true, speed=1, drawMode=false, draft=[], map, fenceLayer, draftLayer, vertexLayers=[], cowMarkers={}, gatewayMarker=null, gateway=copy(GATEWAY_DEFAULT), coverageLayer=null, showCoverage=true, simulationTimer;
+let dataMode='DEMO', liveConnected=false, livePort='', lastUpdateSequence=0, bridgeAvailable=false;
+let deviceFirstFix=false, lastBridgeError='', pendingCommands=new Map();
+function insideFence(point,poly=fence){const x=point.lng,y=point.lat;let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const xi=poly[i][1],yi=poly[i][0],xj=poly[j][1],yj=poly[j][0];if(((yi>y)!=(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))inside=!inside;}return inside;}
+function escapeHTML(str){return String(str).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function cowById(id){return cows.find(c=>c.id===id);}
+function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
+function gpsLabel(c){
+ if(c.gpsValid===false)return {label:'Unavailable',kind:'bad',note:'No valid GPS position. Fence checks may be unreliable.'};
+ if(dataMode==='LIVE'&&Date.now()-(c.lastSeen||0)>60000)return {label:'Not updating',kind:'bad',note:'The latest position is over a minute old.'};
+ if(!Number.isFinite(c.gpsAccuracy)||c.gpsAccuracy<=0)return {label:'Position found',kind:'neutral',note:'GPS accuracy has not been reported by the device.'};
+ if(c.gpsAccuracy<=5)return {label:'Precise',kind:'good',note:'Location is precise enough for a typical map view.'};
+ if(c.gpsAccuracy<=15)return {label:'Approximate',kind:'caution',note:'Position may vary by several metres near the fence.'};
+ return {label:'Uncertain',kind:'bad',note:'Location may be inaccurate. Check the animal on site.'};
+}
+function signalLabel(c){
+ if(dataMode==='LIVE'&&Date.now()-(c.lastSeen||0)>60000)return {label:'Not connected',kind:'bad',note:'No new animal updates in the last minute.'};
+ if(!Number.isFinite(c.rssi))return {label:'Not reported',kind:'neutral',note:'Radio signal strength is not available.'};
+ // Approximate RSSI bands only, not a guaranteed measure of LoRa delivery quality.
+ if(c.rssi>=-90)return {label:'Good',kind:'good',note:'The base station is receiving a strong signal estimate.'};
+ if(c.rssi>=-110)return {label:'Fair',kind:'caution',note:'Updates are arriving, but signal strength is moderate.'};
+ return {label:'Weak',kind:'bad',note:'Reception may be less reliable. Check the connection.'};
+}
+function setQuality(id,state){const el=document.getElementById(id);el.textContent=state.label;el.className='quality '+(state.kind==='good'?'':state.kind);}
+function gatewayVisible(){return gateway&&gateway.gpsValid!==false&&Number.isFinite(gateway.lat)&&Number.isFinite(gateway.lng);}
+function gatewayStale(){return dataMode==='LIVE'&&gateway&&Date.now()-(gateway.lastSeen||0)>60000;}
+function renderGatewayStatus(){const strip=document.getElementById('gateway-strip'),strong=strip.querySelector('strong'),message=document.getElementById('gateway-message'),focus=document.getElementById('gateway-focus');
+ strong.textContent=dataMode==='DEMO'?'📡 Base station (demo GNSS)':'📡 Base station (GNSS)';
+ const visible=gatewayVisible();strip.classList.toggle('unavailable',!visible||gatewayStale());
+ message.textContent=dataMode==='DEMO'?'Position available · simulated':!gateway?'Waiting for base station GNSS data':gateway.gpsValid===false?'GPS position unavailable':gatewayStale()?'Last known position · not updating':gateway.simulated?`Position available · ${liveSource==='MQTT'?'Wi-Fi':'USB'} test (simulated)`:'Position available · live GNSS';
+ focus.disabled=!visible;focus.textContent=gatewayStale()?'Last position':'Show on map';
+}
+function stateFor(c){const outside=c.gpsValid===false?false:!insideFence(c);return {outside,clapper:dataMode==='LIVE'?(c.clapperState||'UNKNOWN'):(c.mode==='SOUND'||(c.mode==='AUTO'&&outside)?'RELEASED':'LOCKED')};}
+function showToast(message,warning=false){const area=document.getElementById('toast-area');const el=document.createElement('div');el.className='toast'+(warning?' warning':'');el.textContent=message;area.prepend(el);setTimeout(()=>el.remove(),4200);}
+// Bell chimes are synthesized locally with Web Audio: no audio asset or network needed.
+// Browsers require a user gesture before sound can play, so alerts start muted.
+let bellSoundEnabled=false, audioContext=null, lastBellAt=0;
+function updateBellButton(){
+  const button=document.getElementById('sound-toggle');
+  button.classList.toggle('active',bellSoundEnabled);
+  button.setAttribute('aria-pressed',String(bellSoundEnabled));
+  button.innerHTML=bellSoundEnabled?'🔔 <span class="chime-label">Bell alerts: On</span>':'🔕 <span class="chime-label">Bell alerts: Off</span>';
+  button.title=bellSoundEnabled?'Mute activity notifications':'Enable a bell chime for every new activity event';
+}
+function playBellChime(type='info',force=false){
+  if(!bellSoundEnabled&&!force)return;
+  if(!audioContext||audioContext.state!=='running')return;
+  const timestamp=performance.now();
+  if(!force&&timestamp-lastBellAt<650)return; // Avoid overlapping chimes from burst events.
+  lastBellAt=timestamp;
+  const t=audioContext.currentTime+0.025;
+  function strike(start,strength){
+    // Slightly inharmonic sine partials sound more like a struck bronze bell than a beep.
+    const partials=[[523.25,1],[731,0.42],[1189,0.22],[1631,0.13],[2157,0.07]];
+    partials.forEach(([frequency,amplitude],index)=>{
+      const oscillator=audioContext.createOscillator();
+      const envelope=audioContext.createGain();
+      const length=1.0+index*0.12;
+      oscillator.type='sine';
+      oscillator.frequency.setValueAtTime(frequency,start);
+      envelope.gain.setValueAtTime(0.0001,start);
+      envelope.gain.exponentialRampToValueAtTime(0.105*amplitude*strength,start+0.009);
+      envelope.gain.exponentialRampToValueAtTime(0.0001,start+length);
+      oscillator.connect(envelope);
+      envelope.connect(audioContext.destination);
+      oscillator.start(start);
+      oscillator.stop(start+length+0.02);
+      oscillator.onended=()=>{oscillator.disconnect();envelope.disconnect();};
+    });
+  }
+  strike(t,1);
+  if(type==='alert')strike(t+0.26,0.75); // Two strikes distinguish breaches from normal activity.
+}
+async function toggleBellAlerts(){
+  if(bellSoundEnabled){bellSoundEnabled=false;updateBellButton();showToast('ReBell activity chimes muted.');return;}
+  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+  if(!AudioContextClass){showToast('This browser does not support sound notifications.',true);return;}
+  try{
+    if(!audioContext)audioContext=new AudioContextClass();
+    // resume() is invoked directly in the click handler for browser autoplay policies.
+    if(audioContext.state!=='running')await audioContext.resume();
+    if(audioContext.state!=='running')throw new Error('Audio context unavailable');
+    bellSoundEnabled=true;updateBellButton();playBellChime('info',true);
+    showToast('Bell alerts enabled. New activities will ring.');
+  }catch(err){bellSoundEnabled=false;updateBellButton();showToast('Sound blocked by the browser; try enabling it again.',true);}
+}
+function addEvent(title,description,type='info',cowId=null){events.unshift({title,description,type,cowId,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})});events=events.slice(0,45);renderEvents();playBellChime(type);}
+
+function renderEvents(){const el=document.getElementById('event-list');el.innerHTML=events.length?events.slice(0,8).map(e=>`<div class="event"><div class="event-mark ${e.type==='alert'?'alert':''}">${e.type==='alert'?'!':e.type==='command'?'↗':'✓'}</div><div class="event-content"><div class="event-title">${escapeHTML(e.title)}</div><div class="event-desc">${escapeHTML(e.description)}</div></div><div class="event-time">${e.time}</div></div>`).join(''):'<div class="empty">No events yet</div>';document.getElementById('event-count').textContent=`${events.length} events`;}
+function renderStatistics(){const valid=cows.filter(c=>c.gpsValid!==false);const outside=valid.filter(c=>!insideFence(c)).length;const online=dataMode==='LIVE'?cows.filter(c=>Date.now()-(c.lastSeen||0)<60000).length:cows.length;document.getElementById('stat-total').textContent=cows.length;document.getElementById('stat-inside').textContent=valid.length-outside;document.getElementById('stat-alerts').textContent=outside;document.getElementById('stat-online').textContent=online;document.getElementById('side-count').textContent=outside;document.getElementById('map-animals').textContent=`${cows.length} animals`;document.getElementById('herd-count').textContent=`${cows.length} cows`;}
+function renderDetails(){
+ const c=cowById(selectedId);document.getElementById('device-source').textContent=dataMode==='LIVE'?'Gateway USB':'LoRa mock';
+ const note=document.getElementById('hardware-note');note.innerHTML=dataMode==='LIVE'?'<strong>Live hardware:</strong> A command is sent over USB. ACK means gateway accepted it; telemetry must confirm actual motor/clapper position.':'<strong>Demo behavior:</strong> Auto releases clapper outside the fence and locks it inside (simulation only).';
+ const locate=document.getElementById('detail-locate-button');locate.disabled=!c;
+ if(!c){document.getElementById('detail-name').textContent='Awaiting telemetry';document.getElementById('detail-id').textContent='No live animals received';document.getElementById('detail-status').textContent='NO DATA';document.getElementById('detail-status').className='status-chip';
+  for(const id of ['detail-location','detail-clapper','detail-battery','detail-coordinates','detail-gps-raw','detail-signal-raw'])document.getElementById(id).textContent='—';
+  setQuality('detail-gps',{label:'No data',kind:'neutral'});setQuality('detail-signal',{label:'No data',kind:'neutral'});
+  document.getElementById('detail-gps-note').textContent='Waiting for the animal’s GPS position.';document.getElementById('detail-signal-note').textContent='Waiting for a radio update.';
+  document.getElementById('battery-bar').style.width='0%';document.querySelectorAll('.mode-btn').forEach(b=>{b.classList.remove('active');b.disabled=true;});return;
+ }
+ const state=stateFor(c),gps=gpsLabel(c),signal=signalLabel(c);document.getElementById('detail-name').textContent=c.name;document.getElementById('detail-id').textContent=c.id;
+ const status=document.getElementById('detail-status'),stale=dataMode==='LIVE'&&Date.now()-(c.lastSeen||0)>60000;
+ status.textContent=stale?'OFFLINE':c.gpsValid===false?'GPS LOST':state.outside?'OUTSIDE':'INSIDE';status.className='status-chip'+(state.outside||stale?' out':'');
+ document.getElementById('detail-location').textContent=c.gpsValid===false?'Last known':'On the map';
+ setQuality('detail-gps',gps);document.getElementById('detail-gps-note').textContent=gps.note;
+ setQuality('detail-signal',signal);document.getElementById('detail-signal-note').textContent=signal.note;
+ document.getElementById('detail-coordinates').textContent=`${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}${dataMode==='DEMO'?' (demo)':''}`;
+ document.getElementById('detail-gps-raw').textContent=Number.isFinite(c.gpsAccuracy)&&c.gpsAccuracy>0?`± ${c.gpsAccuracy.toFixed(1)} m`:'Not reported';
+ document.getElementById('detail-signal-raw').textContent=Number.isFinite(c.rssi)?`${c.rssi} dBm`:'Not reported';
+ document.getElementById('detail-clapper').textContent=state.clapper;
+ document.getElementById('detail-battery').textContent=Number.isFinite(c.battery)?`${c.battery}%`:'—';
+ document.getElementById('battery-bar').style.width=`${Number.isFinite(c.battery)?c.battery:0}%`;
+ document.querySelectorAll('.mode-btn').forEach(b=>{b.disabled=dataMode==='LIVE'&&!liveConnected;b.classList.toggle('active',b.dataset.mode===c.mode);});
+}
+function renderHerd(){const q=document.getElementById('search-cows').value.trim().toLowerCase();const list=cows.filter(c=>(c.name+' '+c.id).toLowerCase().includes(q));document.getElementById('herd-list').innerHTML=list.map((c)=>{const out=c.gpsValid!==false&&!insideFence(c);const invalid=c.gpsValid===false;const index=cows.findIndex(x=>x.id===c.id)+1;return `<button class="herd-item ${selectedId===c.id?'active':''}" data-cow="${c.id}"><span class="herd-num ${out?'out':''}">${String(index).padStart(2,'0')}</span><span><span class="herd-name">${escapeHTML(c.name)}</span><span class="herd-id" style="display:block">${escapeHTML(c.id)}</span></span><span class="herd-status ${out?'out':''}">${out?'● Outside':'● Inside'}</span></button>`;}).join('')||'<div class="empty">No matching animals</div>';document.querySelectorAll('.herd-item').forEach(b=>b.addEventListener('click',()=>selectCow(b.dataset.cow,true)));}
+function markerHtml(c){const n=cows.findIndex(x=>x.id===c.id)+1;const s=stateFor(c);return `<div class="cow-pin ${s.outside?'alert':''} ${selectedId===c.id?'selected':''}">${String(n).padStart(2,'0')}</div>`;}
+function renderMarkers(){if(!map){renderFallbackMap();return;}for(const [id,marker] of Object.entries(cowMarkers)){if(!cows.some(c=>c.id===id)){marker.remove();delete cowMarkers[id];}}cows.forEach(c=>{const icon=L.divIcon({className:'',html:markerHtml(c),iconSize:[34,34],iconAnchor:[17,17]});let marker=cowMarkers[c.id];if(!marker){marker=L.marker([c.lat,c.lng],{icon,keyboard:true,title:c.name}).addTo(map);marker.on('click',()=>{if(!drawMode)selectCow(c.id,false);});cowMarkers[c.id]=marker;}else{marker.setLatLng([c.lat,c.lng]);marker.setIcon(icon);}marker.bindPopup(`<strong>${escapeHTML(c.name)}</strong><br>${escapeHTML(c.id)} · ${stateFor(c).outside?'Outside':'Inside'} boundary`);});}
+function renderGatewayMarker(){
+ if(!map)return;
+ if(!gatewayVisible()){if(gatewayMarker){gatewayMarker.remove();gatewayMarker=null;}return;}
+ const stale=gatewayStale();
+ const icon=L.divIcon({className:'',html:`<div class="gateway-pin${stale?' stale':''}" aria-label="Base station">📡</div>`,iconSize:[40,40],iconAnchor:[20,20]});
+ if(!gatewayMarker){gatewayMarker=L.marker([gateway.lat,gateway.lng],{icon,keyboard:true,title:'Base station · GNSS',zIndexOffset:900}).addTo(map);}else{gatewayMarker.setLatLng([gateway.lat,gateway.lng]);gatewayMarker.setIcon(icon);}
+ gatewayMarker.bindPopup(`<strong>📡 Base station</strong><br>${gateway.simulated?'Simulated GNSS location':stale?'Last known GNSS position':'Live gateway GNSS location'}<br>${escapeHTML(gateway.lat.toFixed(5))}, ${escapeHTML(gateway.lng.toFixed(5))}`);
+}
+function renderCoverage(){
+ const note=document.getElementById('coverage-note'),legend=document.getElementById('coverage-legend');
+ const available=showCoverage&&gatewayVisible();
+ note.style.display=showCoverage?'':'none';legend.style.display=showCoverage?'':'none';
+ if(!map){if(fallbackInitialized)renderFallbackMap();return;}
+ if(!available){if(coverageLayer){coverageLayer.remove();coverageLayer=null;}return;}
+ const location=[gateway.lat,gateway.lng];
+ if(!coverageLayer){
+   coverageLayer=L.circle(location,{radius:LORA_ILLUSTRATION_RADIUS_M,color:'#587bcc',weight:2,dashArray:'7 7',fillColor:'#628cf2',fillOpacity:0.055,interactive:false}).addTo(map);
+   coverageLayer.bringToBack(); // Keep the dashed virtual fence and markers visually dominant.
+ }else{coverageLayer.setLatLng(location);coverageLayer.setRadius(LORA_ILLUSTRATION_RADIUS_M);}
+}
+function focusGateway(){if(!gatewayVisible())return;if(map){map.setView([gateway.lat,gateway.lng],Math.max(map.getZoom(),16),{animate:true});if(gatewayMarker)gatewayMarker.openPopup();}else{renderFallbackMap();}}
+function selectCow(id,fly){const c=cowById(id);if(!c)return;selectedId=id;renderDetails();renderHerd();renderMarkers();if(fly&&map)map.panTo([c.lat,c.lng],{animate:true,duration:.45});}
+function renderAll(){renderStatistics();renderDetails();renderHerd();renderMarkers();renderGatewayMarker();renderCoverage();renderGatewayStatus();}
+function renderFence(){if(!map){renderFallbackMap();return;}if(fenceLayer)fenceLayer.remove();fenceLayer=L.polygon(fence,{color:'#267a4d',weight:2.5,fillColor:'#69bd86',fillOpacity:.17,dashArray:'9 6'}).addTo(map);}
+function renderDraft(){if(!map){renderFallbackMap();}else{if(draftLayer)draftLayer.remove();vertexLayers.forEach(l=>l.remove());vertexLayers=[];if(draft.length>0){draftLayer=L.polyline(draft,{color:'#ba7a26',weight:3,dashArray:'6 6'}).addTo(map);draft.forEach(ll=>vertexLayers.push(L.circleMarker(ll,{radius:6,weight:2,color:'#b86a2c',fillColor:'white',fillOpacity:1}).addTo(map)));}}document.getElementById('finish-button').disabled=draft.length<3;document.getElementById('undo-button').disabled=draft.length===0;document.getElementById('map-overlay').innerHTML=drawMode?`<strong>Drawing new boundary</strong><br>Click on the map to add corners (${draft.length}). Add at least 3 points, then Save.`:dataMode==='DEMO'?'<strong>Parc de Milan · Demo</strong><br>Green = example virtual fence':'<strong>Live GNSS map</strong><br>Green = configured virtual fence';}
+function setDrawMode(active){drawMode=active;draft=[];document.getElementById('map').classList.toggle('draw-active',active);['finish-button','undo-button','cancel-button'].forEach(id=>document.getElementById(id).style.display=active?'inline-flex':'none');document.getElementById('draw-button').style.display=active?'none':'inline-flex';renderDraft();}
+function saveFence(){if(draft.length<3){showToast('Add at least 3 points to save a boundary.',true);return;}const before=new Map(cows.map(c=>[c.id,insideFence(c)]));fence=copy(draft);try{localStorage.setItem(STORAGE_KEY,JSON.stringify(fence));}catch(_){}setDrawMode(false);renderFence();checkFenceTransitions(before);renderAll();addEvent('Virtual boundary updated',`Saved a new ${fence.length}-point polygon.`);showToast('Boundary saved in this browser.');}
+function checkFenceTransitions(previous){cows.forEach(c=>{const wasInside=previous.get(c.id),isInside=insideFence(c);if(wasInside!==isInside){if(!isInside){addEvent(`Boundary breach · ${c.name}`,`${c.id} is outside the defined area.`, 'alert', c.id);showToast(`Boundary alert: ${c.name} is outside!`,true);}else addEvent(`${c.name} returned to pasture`,`${c.id} is back inside the virtual fence.`);}});}
+// Offline schematic map: same interaction logic, with no external libraries.
+// Coordinates in this drawing are fictional demo coordinates, not surveyed parcel boundaries.
+let fallbackInitialized=false;
+const FALLBACK_BOUNDS={north:46.51562,south:46.51392,west:6.62085,east:6.62330};
+function fbPoint(lat,lng){const b=FALLBACK_BOUNDS;return {x:(lng-b.west)/(b.east-b.west)*720,y:(b.north-lat)/(b.north-b.south)*470};}
+function renderFallbackMap(){
+  if(!fallbackInitialized)return;
+  const svg=document.getElementById('fallback-svg');if(!svg)return;
+  const fencePts=fence.map(([lat,lng])=>fbPoint(lat,lng));
+  const poly=fencePts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const draftPts=draft.map(([lat,lng])=>fbPoint(lat,lng));
+  svg.innerHTML=`<defs><pattern id="pasturelines" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M0 30Q15 20 30 30T60 30" fill="none" stroke="#9eb899" stroke-width=".6" opacity=".3"/></pattern></defs>
+    <rect width="720" height="470" fill="#dfead1"/>
+    <path d="M-35 50Q125 -32 240 64T520 35T770 80L760 300Q515 260 340 400T-20 365Z" fill="#c5ddb8" opacity=".85"/>
+    <path d="M0 360Q165 296 270 374T560 295T740 329L740 470H0Z" fill="#ebecd1" opacity=".8"/>
+    <path d="M-25 235C135 225 170 165 300 200S510 247 740 100" stroke="#f5f1dd" stroke-width="19" fill="none" opacity=".75"/>
+    <path d="M70 -20L210 480M510 -20L620 480" stroke="#b4cba7" stroke-width="2" stroke-dasharray="5 11" opacity=".65"/>
+    <rect width="720" height="470" fill="url(#pasturelines)"/>
+    ${showCoverage&&gatewayVisible()?(()=>{const pt=fbPoint(gateway.lat,gateway.lng);const xRadius=LORA_ILLUSTRATION_RADIUS_M/(111320*Math.cos(gateway.lat*Math.PI/180))/(FALLBACK_BOUNDS.east-FALLBACK_BOUNDS.west)*720;const yRadius=LORA_ILLUSTRATION_RADIUS_M/111320/(FALLBACK_BOUNDS.north-FALLBACK_BOUNDS.south)*470;return `<ellipse cx="${pt.x}" cy="${pt.y}" rx="${xRadius.toFixed(1)}" ry="${yRadius.toFixed(1)}" fill="#618bed" fill-opacity=".07" stroke="#5276be" stroke-width="2" stroke-dasharray="7 7" pointer-events="none"/>`;})():''}
+    <polygon points="${poly}" fill="#68bd86" fill-opacity=".23" stroke="#257a4c" stroke-width="3.2" stroke-dasharray="9 7" stroke-linejoin="round"/>
+    <text x="355" y="395" fill="#3b7851" font-size="18" font-weight="750" opacity=".7" text-anchor="middle">PARC DE MILAN · DEMO</text>
+    ${draftPts.length>0?`<polyline points="${draftPts.map(p=>`${p.x},${p.y}`).join(' ')}" fill="none" stroke="#b97524" stroke-width="3" stroke-dasharray="9 5"/>`:''}
+    ${draftPts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="7" fill="white" stroke="#b97524" stroke-width="3"/>`).join('')}
+    ${gatewayVisible()?(()=>{const p=fbPoint(gateway.lat,gateway.lng);return `<g class="fallback-gateway"><rect x="${p.x-20}" y="${p.y-20}" rx="10" width="40" height="40" fill="${gatewayStale()?'#8993a8':'#405bb5'}" stroke="#fff" stroke-width="3"/><text x="${p.x}" y="${p.y+6}" text-anchor="middle" font-size="19" fill="white" pointer-events="none">⌂</text><text x="${p.x+26}" y="${p.y-10}" font-size="13" font-weight="750" fill="#304a86">BASE STATION</text></g>`;})():''}
+    ${cows.map((c,i)=>{const p=fbPoint(c.lat,c.lng),out=!insideFence(c),active=selectedId===c.id;return `<g class="fallback-cow" data-cow="${c.id}" style="cursor:pointer"><circle cx="${p.x}" cy="${p.y}" r="${active?23:20}" fill="${out?'#cf7339':'#287451'}" stroke="${active?'#1d4932':'#fff'}" stroke-width="${active?5:3}"/><text x="${p.x}" y="${p.y+5}" text-anchor="middle" font-size="14" font-weight="800" fill="white" pointer-events="none">${String(i+1).padStart(2,'0')}</text></g>`;}).join('')}`;
+}
+function initFallbackMap(){
+  const wrap=document.getElementById('map');
+  wrap.insertAdjacentHTML('afterbegin','<svg id="fallback-svg" viewBox="0 0 720 470" preserveAspectRatio="none" width="100%" height="100%" role="img" aria-label="Schematic offline pasture map with clickable cattle markers"></svg>');
+  document.getElementById('map-attribution').textContent='Offline schematic · approximate Parc de Milan layout';
+  fallbackInitialized=true;
+  wrap.addEventListener('click',e=>{
+    if(!drawMode){const cowEl=e.target.closest('[data-cow]');if(cowEl)selectCow(cowEl.dataset.cow,false);return;}
+    const svg=document.getElementById('fallback-svg'),rect=svg.getBoundingClientRect();
+    const x=clamp((e.clientX-rect.left)/rect.width,0,1),y=clamp((e.clientY-rect.top)/rect.height,0,1);
+    const b=FALLBACK_BOUNDS;draft.push([+(b.north-y*(b.north-b.south)).toFixed(6),+(b.west+x*(b.east-b.west)).toFixed(6)]);
+    renderDraft();
+  });
+  renderFallbackMap();
+  document.getElementById('map-overlay').innerHTML='<strong>Parc de Milan · offline schematic</strong><br>Sample positions, not real GNSS; draw a virtual fence.';
+}
+function initMap(){if(typeof L==='undefined'){initFallbackMap();return;}map=L.map('map',{zoomControl:false,preferCanvas:true}).setView(PARK_CENTER,17);const baseLayers={'Satellite':L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics',maxZoom:19}),'Topo':L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM | &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)',subdomains:'abc',maxZoom:17}),'Street map':L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',maxZoom:19})};let startLayer='Satellite';try{const saved=localStorage.getItem('rebell_base_layer');if(baseLayers[saved])startLayer=saved;else if(location.protocol!=='file:')startLayer='Street map';}catch(_){}baseLayers[startLayer].addTo(map);L.control.layers(baseLayers,null,{position:'topright'}).addTo(map);map.on('baselayerchange',e=>{try{localStorage.setItem('rebell_base_layer',e.name);}catch(_){}});L.control.zoom({position:'bottomright'}).addTo(map);map.on('click',e=>{if(drawMode){draft.push([+e.latlng.lat.toFixed(6),+e.latlng.lng.toFixed(6)]);renderDraft();}});renderFence();renderMarkers();renderGatewayMarker();setTimeout(()=>{map.invalidateSize();if(dataMode==='DEMO')map.fitBounds(L.latLngBounds([...fence,...cows.map(c=>[c.lat,c.lng]),[gateway.lat,gateway.lng]]),{padding:[40,40],maxZoom:18});},200);}
+async function commandSound(mode){const c=cowById(selectedId);if(!c)return;if(dataMode==='DEMO'){c.mode=mode;renderAll();addEvent(`${c.name} · ${mode.toLowerCase()} command`,`Demo command accepted for ${c.id}; no physical actuator connected.`, 'command',c.id);showToast(`${c.name}: ${mode} mode (simulation only)`);return;}
+ if(!liveConnected){showToast('Connect a USB or Wi-Fi gateway first.',true);return;}
+ try{const cmd=liveSource==='MQTT'?mqttSend('cmd/sound',{type:'command',commandId:newCommandId('cmd'),deviceId:c.id,action:'SET_SOUND_MODE',mode}):(await api('/api/command',{deviceId:c.id,mode})).result;pendingCommands.set(cmd.commandId,{deviceId:c.id,mode,at:Date.now()});addEvent('Command sent',`${c.id}: ${mode}. Awaiting gateway ACK; no actuation confirmed.`, 'command',c.id);showToast(`Command sent to gateway (${mode}); waiting for ACK.`);}catch(e){showToast(e.message,true);}}
+function simulateStep(){if(dataMode!=='DEMO'||!isPlaying)return;const before=new Map(cows.map(c=>[c.id,insideFence(c)]));cows.forEach(c=>{const step=.000035*speed;const candidate={lat:c.lat+((Math.random()-.5)*step),lng:c.lng+((Math.random()-.5)*step*1.4)};if(insideFence(candidate)){c.lat=candidate.lat;c.lng=candidate.lng;}c.gpsAccuracy=clamp(c.gpsAccuracy+(Math.random()-.5)*.2,1.5,7);});checkFenceTransitions(before);renderAll();}
+function simulateBreach(){
+ if(dataMode!=='DEMO'){showToast('Simulate breach is only available in Simulation mode.',true);return;}
+ const c=cowById(selectedId);if(!c)return;
+ // Keep the demonstration cow inside Parc de Milan, even when it crosses the *inner* virtual fence.
+ const testPoints=[[46.51516,6.62222],[46.51432,6.62291],[46.51513,6.62172],[46.51407,6.62238]];
+ const point=testPoints.find(([lat,lng])=>!insideFence({lat,lng}));
+ if(!point){showToast('No demo breach spot available within the park for this fence.',true);return;}
+ const before=new Map(cows.map(a=>[a.id,insideFence(a)]));
+ c.lat=point[0];c.lng=point[1];checkFenceTransitions(before);renderAll();if(map)map.panTo([c.lat,c.lng]);
+ if(before.get(c.id)===false){addEvent(`Breach scenario · ${c.name}`,'Animal remains in Parc de Milan but outside your inner virtual fence.', 'alert',c.id);showToast(`${c.name} crossed the demonstration fence.`,true);}
+}
+function resetAll(){if(dataMode!=='DEMO'){showToast('Switch to Simulation mode before resetting mock data.',true);return;}cows=copy(COWS_DEFAULT);fence=copy(FENCE_DEFAULT);try{localStorage.removeItem(STORAGE_KEY);}catch(_){}selectedId='COW-006';gateway=copy(GATEWAY_DEFAULT);events=[];isPlaying=true;speed=1;document.getElementById('play-button').textContent='Ⅱ Pause';document.querySelectorAll('[data-speed]').forEach(b=>b.classList.toggle('on',+b.dataset.speed===1));setDrawMode(false);renderFence();renderAll();addEvent('Simulation reset','Demo GNSS positions and Parc de Milan boundary restored.');showToast('Simulation reset to initial state.');if(map)map.fitBounds(L.latLngBounds([...fence,...cows.map(c=>[c.lat,c.lng]),[gateway.lat,gateway.lng]]),{padding:[40,40],maxZoom:18});}
+function exportData(){const payload={schema:'cowbell-demo-v1',source:dataMode==='LIVE'?'hardware':'mock',generatedAt:new Date().toISOString(),boundary:fence,baseStation:gateway,animals:cows.map(c=>({...c,insideBoundary:insideFence(c),clapperState:stateFor(c).clapper})),events};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=dataMode==='LIVE'?'rebell-live-data.json':'rebell-demo-data.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);showToast('Demo data exported as JSON.');}
+function setup(){document.getElementById('sound-toggle').addEventListener('click',toggleBellAlerts);updateBellButton();document.getElementById('draw-button').addEventListener('click',()=>setDrawMode(true));document.getElementById('finish-button').addEventListener('click',saveFence);document.getElementById('undo-button').addEventListener('click',()=>{draft.pop();renderDraft();});document.getElementById('cancel-button').addEventListener('click',()=>setDrawMode(false));document.getElementById('reset-fence').addEventListener('click',()=>{const before=new Map(cows.map(c=>[c.id,insideFence(c)]));fence=copy(FENCE_DEFAULT);try{localStorage.removeItem(STORAGE_KEY);}catch(_){}setDrawMode(false);renderFence();checkFenceTransitions(before);renderAll();addEvent('Boundary reset','Restored the Parc de Milan sample boundary.');showToast('Default boundary restored.');});document.querySelectorAll('.mode-btn').forEach(b=>b.addEventListener('click',()=>commandSound(b.dataset.mode)));document.getElementById('search-cows').addEventListener('input',renderHerd);document.getElementById('gateway-focus').addEventListener('click',focusGateway);document.getElementById('coverage-toggle').addEventListener('change',e=>{showCoverage=e.currentTarget.checked;renderCoverage();});document.getElementById('detail-locate-button').addEventListener('click',()=>{const c=cowById(selectedId);if(c&&map)map.setView([c.lat,c.lng],Math.max(map.getZoom(),16),{animate:true});});document.getElementById('breach-button').addEventListener('click',simulateBreach);document.getElementById('play-button').addEventListener('click',e=>{isPlaying=!isPlaying;e.currentTarget.textContent=isPlaying?'Ⅱ Pause':'▶ Resume';showToast(isPlaying?'Simulation resumed':'Simulation paused');});document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',()=>{speed=+b.dataset.speed;document.querySelectorAll('[data-speed]').forEach(x=>x.classList.toggle('on',+x.dataset.speed===speed));}));document.getElementById('reset-button').addEventListener('click',resetAll);document.getElementById('export-button').addEventListener('click',exportData);document.querySelectorAll('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('[data-nav]').forEach(n=>n.classList.toggle('active',n===btn));const target=document.getElementById(btn.dataset.nav);if(target)target.scrollIntoView({behavior:'smooth',block:'start'});if(map)setTimeout(()=>map.invalidateSize(),350);}));document.addEventListener('keydown',e=>{if(e.key==='Escape'&&drawMode)setDrawMode(false);});initMap();renderAll();addEvent('Simulation started','All 6 example cows and the GNSS base station are within Parc de Milan.');simulationTimer=setInterval(simulateStep,1600);}
+
+// --- USB / Desktop adapter: local server, no dependency in browser other than native fetch. ---
+async function api(path, body){
+ const settings=body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)};
+ let response;try{response=await fetch(path,settings);}catch(_){throw new Error('Start ReBell_PC_App/start_rebell.bat first (http://127.0.0.1:8765).');}
+ const result=await response.json();if(!response.ok)throw new Error(result.error||'USB request failed.');return result;
+}
+function setMode(mode){if(mode===dataMode)return;dataMode=mode;deviceFirstFix=false;pendingCommands.clear();if(mode==='LIVE'){cows=[];gateway=null;selectedId=null;events=[];isPlaying=false;deviceFirstFix=false;document.getElementById('play-button').textContent='▶ Resume';}else{cows=copy(COWS_DEFAULT);gateway=copy(GATEWAY_DEFAULT);selectedId='COW-006';events=[];isPlaying=true;document.getElementById('play-button').textContent='Ⅱ Pause';}
+ document.getElementById('demo-button').classList.toggle('selected',mode==='DEMO');document.getElementById('live-button').classList.toggle('selected',mode==='LIVE');document.getElementById('source-badge').innerHTML=mode==='LIVE'?'<span class="dot"></span> LIVE DATA':'<span class="dot"></span> DEMO DATA';document.getElementById('source-badge').className='pill '+(mode==='LIVE'?'live':'demo');document.getElementById('map-source-label').textContent=mode==='LIVE'?`Incoming GPS fixes from ${liveLabel()}`:'Parc de Milan, Lausanne · simulated GNSS positions';document.getElementById('online-caption').textContent=mode==='LIVE'?'Telemetry received in last 60 s':'Mock LoRa connections';document.getElementById('footer-source').textContent=mode==='LIVE'?(liveSource==='MQTT'?'Wi-Fi gateway data / device feedback':'USB data / device feedback'):'All positions & commands simulated';document.querySelectorAll('#breach-button,#play-button,#reset-button,[data-speed]').forEach(b=>b.disabled=mode==='LIVE');updateConnectionUI();renderDraft();renderAll();if(mode==='DEMO')addEvent('Simulation active','Mock devices shown; hardware commands are disabled.');else addEvent(liveSource==='MQTT'?'Live Wi-Fi mode':'Live USB mode','Awaiting device telemetry. No mock cows are displayed.');
+}
+function updateConnectionUI(){const mq=liveSource==='MQTT';const usbOn=liveConnected&&!mq;const state=document.getElementById('connection-status');
+ state.textContent=liveConnected?(mq?`Wi-Fi gateway · ${livePort}`:`USB connected · ${livePort}`):dataMode==='LIVE'?(mq?'Wi-Fi gateway disconnected':'USB disconnected'):'Simulation active';state.className='connection-state'+(liveConnected?' live':dataMode==='LIVE'?' error':'');
+ document.getElementById('connection-hint').textContent=liveConnected?(mq?'Receiving through broker.hivemq.com. Select Live hardware to view incoming telemetry.':'COM port open. Select Live hardware to view actual incoming telemetry.'):dataMode==='LIVE'?'Connect a USB port or enter the Wi-Fi gateway topic. No mock data will appear in Live mode.':'Demo data is active. Hardware commands remain disabled.';
+ document.getElementById('sidebar-status').textContent=liveConnected?(mq?'Wi-Fi gateway connected':`USB connected · ${livePort}`):dataMode==='LIVE'?'Gateway disconnected':'Simulation connected';document.getElementById('sidebar-detail').innerHTML=dataMode==='LIVE'?'Live telemetry mode<br>Confirm device status':'Prototype environment<br>Hardware commands disabled';
+ document.getElementById('connect-button').disabled=usbOn;document.getElementById('disconnect-button').disabled=!usbOn;document.getElementById('send-fence-button').disabled=!(liveConnected&&dataMode==='LIVE');
+ document.getElementById('mqtt-connect-button').disabled=mq&&!!mqttClient;document.getElementById('mqtt-disconnect-button').disabled=!(mq&&mqttClient);}
+async function scanPorts(){try{const result=await api('/api/ports');bridgeAvailable=true;const select=document.getElementById('serial-port'),preferred=select.value;select.replaceChildren();for(const port of result.ports){const opt=document.createElement('option');opt.value=port.device;opt.textContent=`${port.device} · ${port.description}`;select.appendChild(opt);}if(result.ports.some(p=>p.device===preferred))select.value=preferred;if(!result.ports.length){const opt=document.createElement('option');opt.value='';opt.textContent=result.serialAvailable?'No serial ports found':'Install pyserial for USB';select.appendChild(opt);} }catch(e){bridgeAvailable=false;document.getElementById('connection-hint').textContent='Demo only: start the local Python server for USB connection.';}}
+async function connectUSB(){const port=document.getElementById('serial-port').value;if(!port){showToast('Select the Arduino COM port first.',true);return;}try{const status=await api('/api/connect',{port,baud:115200});if(liveSource==='MQTT')disconnectMQTT(true);liveSource='USB';liveConnected=status.connected;livePort=status.port||'';lastUpdateSequence=status.sequence||0;setMode('LIVE');updateConnectionUI();showToast(`USB connected to ${port}. Waiting for telemetry.`);}catch(e){showToast(e.message,true);}}
+async function disconnectUSB(){try{await api('/api/disconnect');liveConnected=false;livePort='';updateConnectionUI();renderAll();showToast('USB gateway disconnected.');}catch(e){showToast(e.message,true);}}
+async function sendBoundary(){if(!(liveConnected&&dataMode==='LIVE')){showToast('Connect a gateway and switch to Live mode to send the boundary.',true);return;}if(fence.length>20){showToast('Boundary must have at most 20 points.',true);return;}try{const result=liveSource==='MQTT'?mqttSend('cmd/fence',{type:'config',commandId:newCommandId('cfg'),deviceId:'ALL',configVersion:Math.floor(Date.now()/1000),boundary:fence},true):(await api('/api/boundary',{boundary:fence})).result;pendingCommands.set(result.commandId,{deviceId:'ALL',mode:'BOUNDARY',at:Date.now()});addEvent('Boundary sent to gateway',`${fence.length} vertices sent ${liveSource==='MQTT'?'over Wi-Fi/MQTT':'as serial config'}. LoRa forwarding requires gateway firmware.`, 'command');showToast(`Boundary sent ${liveSource==='MQTT'?'online':'over USB'}; waiting for gateway ACK.`);}catch(e){showToast(e.message,true);}}
+function handleTelemetry(pkt){const id=pkt.deviceId||pkt.id;const loc=pkt.location||{};const lat=loc.latitude??pkt.latitude,lng=loc.longitude??pkt.longitude;if(typeof id!=='string'||!Number.isFinite(lat)||!Number.isFinite(lng))return;const old=cowById(id);const previouslyInside=old?insideFence(old):null;
+ const c=old||{id,name:id,lat,lng,battery:null,gpsAccuracy:0,rssi:null,mode:'UNKNOWN',gpsValid:true,clapperState:'UNKNOWN'};if(!old)cows.push(c);c.lat=lat;c.lng=lng;c.lastSeen=Date.now();c.gpsValid=pkt.gpsValid!==false;
+ if(Number.isFinite(pkt.batteryPercent??pkt.battery))c.battery=clamp(Math.round(pkt.batteryPercent??pkt.battery),0,100);
+ if(Number.isFinite(loc.accuracyM??pkt.gpsAccuracy))c.gpsAccuracy=loc.accuracyM??pkt.gpsAccuracy;
+ if(Number.isFinite(pkt.rssiDbm??pkt.rssi))c.rssi=pkt.rssiDbm??pkt.rssi;
+ if(['AUTO','SILENT','SOUND'].includes(pkt.soundMode??pkt.mode))c.mode=pkt.soundMode??pkt.mode;
+ if(['LOCKED','RELEASED','UNKNOWN'].includes(pkt.clapperState))c.clapperState=pkt.clapperState;
+ if(selectedId===null)selectedId=id;if(pkt.simulated===true){document.getElementById('source-badge').innerHTML=`<span class="dot"></span> ${liveSource==='MQTT'?'WI-FI':'USB'} TEST DATA`;document.getElementById('footer-source').textContent=`${liveSource==='MQTT'?'Wi-Fi':'USB'} test sketch / synthetic positions (not real GPS)`;}
+ if(c.gpsValid){const nowInside=insideFence(c);if(previouslyInside!==nowInside){if(!nowInside){addEvent('Boundary breach · '+c.name,`${id} position lies outside the UI geofence. Verify GNSS accuracy.`, 'alert',id);showToast(`Boundary warning: ${id}`,true);}else if(previouslyInside===false)addEvent(c.name+' returned',`${id} appears inside UI boundary.`);}}
+ if(!deviceFirstFix){deviceFirstFix=true;if(map)map.setView([lat,lng],16);}renderAll();}
+function handleGatewayPosition(pkt){
+ const loc=pkt.location||{},lat=loc.latitude??pkt.latitude,lng=loc.longitude??pkt.longitude;
+ if(pkt.gpsValid===false){if(gateway)gateway.gpsValid=false;else gateway={gpsValid:false,lastSeen:Date.now()};renderAll();return;}
+ if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return;
+ const first=!gatewayVisible();gateway={lat,lng,gpsAccuracy:Number.isFinite(loc.accuracyM??pkt.gpsAccuracy)?loc.accuracyM??pkt.gpsAccuracy:null,gpsValid:true,simulated:pkt.simulated===true,lastSeen:Date.now()};
+ if(first){addEvent('Base station GPS available',gateway.simulated?`${liveSource==='MQTT'?'Wi-Fi':'USB'} test position (simulated), not real GNSS.`:'Gateway GNSS position received.');if(!deviceFirstFix&&map)map.setView([lat,lng],16);}
+ renderAll();
+}
+function handleBridgePacket(p){if(dataMode!=='LIVE'||!p||typeof p!=='object')return;if(p.type==='gateway_position')handleGatewayPosition(p);
+ else if(p.type==='telemetry')handleTelemetry(p);
+ else if(p.type==='event'){const severity=p.severity==='alert'||p.eventType==='boundary_breach'?'alert':'info';addEvent(String(p.title||p.eventType||'Hardware activity'),String(p.description||p.deviceId||'Gateway event'),severity,p.deviceId||null);}
+ else if(p.type==='ack'){const item=pendingCommands.get(p.commandId);if(item){pendingCommands.delete(p.commandId);addEvent(p.status==='accepted'?'Gateway accepted command':'Gateway rejected command',`${item.deviceId} · ${item.mode}: ${p.status||'unknown'}. Physical action not verified.`,p.status==='accepted'?'command':'alert',item.deviceId);showToast(`Gateway ACK: ${p.status||'unknown'} (actuation not verified).`);}}
+ else if(p.type==='bridge_status'&&p.status==='disconnected'){liveConnected=false;livePort='';updateConnectionUI();renderAll();}}
+let polling=false;
+async function pollBridge(){if(polling||liveSource==='MQTT')return;polling=true;try{const result=await api(`/api/updates?since=${lastUpdateSequence}`);bridgeAvailable=true;liveConnected=Boolean(result.connected);livePort=result.port||'';if(result.sequence<lastUpdateSequence)lastUpdateSequence=0;for(const item of result.messages){handleBridgePacket(item.packet);}lastUpdateSequence=result.sequence;updateConnectionUI();if(dataMode==='LIVE')renderStatistics();for(const [key,val] of pendingCommands){if(Date.now()-val.at>7000){pendingCommands.delete(key);if(dataMode==='LIVE')addEvent('ACK timeout',`${val.deviceId} · ${val.mode}: no gateway confirmation (delivery unknown).`,'alert',val.deviceId);}}}catch(_){if(bridgeAvailable){liveConnected=false;updateConnectionUI();}bridgeAvailable=false;}finally{polling=false;}}
+// --- Wi-Fi gateway adapter: MQTT over WebSocket to the public HiveMQ test broker. ---
+const MQTT_URL='wss://broker.hivemq.com:8884/mqtt';
+const MQTT_TOPIC_KEY='rebell_mqtt_topic';
+const MQTT_AUTO_KEY='rebell_mqtt_auto';
+const TOPIC_PATTERN=/^[A-Za-z0-9_-]+(\/[A-Za-z0-9_-]+){0,3}$/;
+const DEVICE_ID_PATTERN=/^[A-Za-z0-9_-]{1,32}$/;
+let liveSource='USB',mqttClient=null,mqttTopic='',mqttConnected=false,gatewayOnline=null;
+function liveLabel(){return liveSource==='MQTT'?'Wi-Fi gateway':'USB gateway';}
+function newCommandId(prefix){const a=new Uint8Array(5);crypto.getRandomValues(a);return prefix+'-'+[...a].map(b=>b.toString(16).padStart(2,'0')).join('');}
+function loadMqttLibrary(){if(window.mqtt)return Promise.resolve();return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://unpkg.com/mqtt@5/dist/mqtt.min.js';s.onload=()=>window.mqtt?resolve():reject(new Error('MQTT library did not load.'));s.onerror=()=>reject(new Error('Could not load the MQTT library – check the internet connection.'));document.head.appendChild(s);});}
+function setMqttState(text,ok=false){const el=document.getElementById('mqtt-state');el.textContent=text;el.className='mqtt-state'+(ok?' ok':'');}
+function mqttSend(sub,pkt,retain=false){if(!mqttClient||!mqttConnected)throw new Error('Wi-Fi gateway is not connected.');const raw=JSON.stringify(pkt);if(raw.length>2048)throw new Error('Message is too long for the gateway.');mqttClient.publish(`${mqttTopic}/${sub}`,raw,{qos:0,retain});return pkt;}
+function validPacket(p){if(!p||typeof p!=='object'||Array.isArray(p))return false;if(!['telemetry','gateway_position','event','ack'].includes(p.type))return false;if(p.type==='telemetry'&&!DEVICE_ID_PATTERN.test(String(p.deviceId??p.id??'')))return false;return true;}
+function onMqttMessage(topic,payload){if(!topic.startsWith(mqttTopic+'/'))return;const sub=topic.slice(mqttTopic.length+1);if(sub.startsWith('cmd/'))return;
+ if(sub==='online'){const on=payload.toString()==='1';if(gatewayOnline!==on){if(gatewayOnline!==null||!on)addEvent(on?'Wi-Fi gateway online':'Wi-Fi gateway offline',on?'Gateway reconnected to the broker.':'Broker reports the gateway lost its connection.',on?'info':'alert');gatewayOnline=on;}setMqttState(on?`Connected · gateway online`:`Connected · gateway offline`,on);return;}
+ if(payload.length>4096)return;let pkt;try{pkt=JSON.parse(payload.toString());}catch(_){return;}if(validPacket(pkt))handleBridgePacket(pkt);}
+async function connectMQTT(){const input=document.getElementById('mqtt-topic');const t=input.value.trim().replace(/\/+$/,'');if(!TOPIC_PATTERN.test(t)){showToast('Enter the topic printed by the gateway, e.g. rebell/A1B2C3D4E5F6.',true);return;}
+ try{await loadMqttLibrary();}catch(e){showToast(e.message,true);return;}
+ if(liveConnected&&liveSource==='USB')await disconnectUSB();disconnectMQTT(true);
+ try{localStorage.setItem(MQTT_TOPIC_KEY,t);localStorage.setItem(MQTT_AUTO_KEY,'1');}catch(_){}
+ mqttTopic=t;liveSource='MQTT';gatewayOnline=null;setMqttState('Connecting to broker…');
+ const client=window.mqtt.connect(MQTT_URL,{clientId:'rebell-web-'+newCommandId('x').slice(2),clean:true,connectTimeout:10000,reconnectPeriod:4000});mqttClient=client;
+ client.on('connect',()=>{if(mqttClient!==client)return;mqttConnected=true;liveConnected=true;livePort=t;client.subscribe(`${t}/#`,{qos:0});setMqttState('Connected · waiting for gateway…');if(dataMode!=='LIVE')setMode('LIVE');else{updateConnectionUI();renderAll();}showToast(`Listening to ${t}`);});
+ client.on('reconnect',()=>{if(mqttClient===client)setMqttState('Reconnecting to broker…');});
+ client.on('offline',()=>{if(mqttClient!==client)return;mqttConnected=false;liveConnected=false;setMqttState('Broker unreachable – retrying');updateConnectionUI();});
+ client.on('error',e=>{if(mqttClient===client)setMqttState('Broker error: '+(e&&e.message||'unknown'));});
+ client.on('message',onMqttMessage);
+ updateConnectionUI();}
+function disconnectMQTT(silent=false){if(mqttClient){const c=mqttClient;mqttClient=null;try{c.end(true);}catch(_){}}const was=mqttConnected;mqttConnected=false;gatewayOnline=null;if(liveSource==='MQTT'){liveConnected=false;livePort='';}setMqttState('Disconnected');updateConnectionUI();renderAll();if(was&&!silent)showToast('Wi-Fi gateway disconnected.');}
+function sweepPendingCommands(limit){for(const [key,val] of pendingCommands){if(Date.now()-val.at>limit){pendingCommands.delete(key);if(dataMode==='LIVE')addEvent('ACK timeout',`${val.deviceId} · ${val.mode}: no gateway confirmation (delivery unknown).`,'alert',val.deviceId);}}}
+function setupHardware(){document.getElementById('demo-button').addEventListener('click',()=>setMode('DEMO'));document.getElementById('live-button').addEventListener('click',()=>setMode('LIVE'));document.getElementById('scan-ports').addEventListener('click',scanPorts);document.getElementById('connect-button').addEventListener('click',connectUSB);document.getElementById('disconnect-button').addEventListener('click',disconnectUSB);document.getElementById('send-fence-button').addEventListener('click',sendBoundary);document.getElementById('mqtt-connect-button').addEventListener('click',connectMQTT);document.getElementById('mqtt-disconnect-button').addEventListener('click',()=>{try{localStorage.setItem(MQTT_AUTO_KEY,'0');}catch(_){}disconnectMQTT();});document.getElementById('mqtt-topic').addEventListener('keydown',e=>{if(e.key==='Enter')connectMQTT();});{let saved='',auto=true;try{saved=localStorage.getItem(MQTT_TOPIC_KEY)||'';auto=localStorage.getItem(MQTT_AUTO_KEY)!=='0';}catch(_){}const fromLink=new URLSearchParams(location.search).get('gw');if(fromLink&&TOPIC_PATTERN.test(fromLink.trim())){saved=fromLink.trim();auto=true;}if(saved)document.getElementById('mqtt-topic').value=saved;if(saved&&auto)setTimeout(connectMQTT,400);}setInterval(()=>{if(liveSource==='MQTT')sweepPendingCommands(10000);},1000);scanPorts();pollBridge();setInterval(pollBridge,900);setInterval(()=>{if(dataMode==='LIVE')renderAll();},5000);updateConnectionUI();}
+
+// Backwards-compatible manual demo telemetry injection.
+// This optional method updates mock positions only; it is not a live hardware transport.
+window.CowbellDemo={
+  ingestTelemetry(packet){if(dataMode!=='DEMO'||!packet||typeof packet.id!=='string')return false;const c=cowById(packet.id);if(!c)return false;const before=new Map(cows.map(a=>[a.id,insideFence(a)]));if(Number.isFinite(packet.latitude)&&Number.isFinite(packet.longitude)){if(Math.abs(packet.latitude)>90||Math.abs(packet.longitude)>180)return false;c.lat=packet.latitude;c.lng=packet.longitude;}if(Number.isFinite(packet.battery))c.battery=clamp(Math.round(packet.battery),0,100);if(Number.isFinite(packet.rssi))c.rssi=packet.rssi;checkFenceTransitions(before);renderAll();return true;},
+  getSnapshot(){return copy({boundary:fence,cows,selectedId,events});},
+  selectCow(id){if(cowById(id)){selectCow(id,true);return true;}return false;}
+};
+window.ReBellDemo=window.CowbellDemo; // Backward-compatible alias for the planned gateway adapter.
+setup();
+setupHardware();
+</script>
+</body>
+</html>
